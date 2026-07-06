@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Floor 3 Squad — Continuous Mafia</title>
+<style>
+  :root { --accent: #76c7c0; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Courier New', monospace;
+    background-color: #000;
+    color: #fff;
+    margin: 0;
+    min-height: 100vh;
+  }
+  header {
+    background: #111;
+    border-bottom: 2px solid #fff;
+    padding: 14px 16px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  header h1 { font-size: 18px; margin: 0; }
+  nav { display: flex; gap: 8px; flex-wrap: wrap; }
+  nav button {
+    background: #333; color: #fff; border: 1px solid #fff;
+    padding: 8px 14px; border-radius: 4px; cursor: pointer;
+    font-family: inherit; font-size: 13px;
+  }
+  nav button:hover { background: #444; }
+  nav button.active { background: var(--accent); color: #000; font-weight: bold; }
+
+  #announcement {
+    background: #222; border-bottom: 1px solid #555;
+    color: var(--accent); text-align: center;
+    padding: 8px; font-size: 14px; display: none;
+  }
+
+  main {
+    display: flex; flex-direction: column; align-items: center;
+    padding: 30px 16px 60px;
+  }
+  .card {
+    background-color: #222; padding: 24px; border: 2px solid #fff;
+    border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    width: 100%; max-width: 380px; margin-bottom: 20px;
+  }
+  .card h2 { margin-top: 0; text-align: center; font-size: 18px; }
+  label { display: block; margin-top: 12px; margin-bottom: 4px; font-size: 13px; }
+  input, select {
+    width: 100%; padding: 10px; border: 2px solid #fff; border-radius: 4px;
+    background-color: #444; color: #fff; font-family: inherit;
+  }
+  button.primary {
+    padding: 10px; border: none; border-radius: 4px; background-color: #555;
+    color: #fff; cursor: pointer; margin-top: 14px; width: 100%;
+    font-family: inherit; font-weight: bold;
+  }
+  button.primary:hover { background-color: var(--accent); color: #000; }
+  button.secondary {
+    padding: 8px; border: 1px solid #888; border-radius: 4px; background: transparent;
+    color: #ccc; cursor: pointer; margin-top: 8px; width: 100%; font-family: inherit;
+  }
+  button.danger { background-color: #7a2222; }
+  .output {
+    margin-top: 10px; padding: 10px; border: 1px solid #fff;
+    background-color: #333; border-radius: 4px; font-weight: bold;
+    white-space: pre-wrap; text-align: center; font-size: 14px; display: none;
+  }
+  .output.show { display: block; }
+  .output.error { border-color: #e77; color: #f88; }
+  .output.success { border-color: var(--accent); color: var(--accent); }
+  .instructions {
+    background: #1a1a1a; border-left: 3px solid var(--accent);
+    padding: 10px 12px; font-size: 12.5px; line-height: 1.5; margin-bottom: 16px;
+    white-space: pre-wrap;
+  }
+  .status-line { font-size: 13px; color: #aaa; text-align: center; margin-top: 6px; }
+  .player-list-item { padding: 6px 0; border-bottom: 1px solid #333; font-size: 13.5px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
+  th, td { border: 1px solid #444; padding: 5px; text-align: left; }
+  th { background: #333; }
+  .small-note { font-size: 11px; color: #888; margin-top: 6px; text-align: center; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>The Mafia</h1>
+  <nav id="navBar"></nav>
+</header>
+<div id="announcement"></div>
+
+<main id="main"></main>
+
+<script>
+/* ================= CONFIG ================= */
+const SCRIPT_URL = 'PASTE_YOUR_DEPLOYED_WEB_APP_URL_HERE';
+const LS_KEY = 'mafia_codename';
+
+/* ================= STATE ================= */
+let state = {
+  view: null,
+  codename: localStorage.getItem(LS_KEY) || null,
+  isAdminMode: new URLSearchParams(location.search).get('admin') === '1',
+  dashboard: null,
+  publicSettings: null
+};
+
+/* ================= API HELPER ================= */
+async function api(action, params) {
+  const url = new URL(SCRIPT_URL);
+  url.searchParams.set('action', action);
+  for (const k in (params || {})) url.searchParams.set(k, params[k]);
+  const res = await fetch(url.toString());
+  return res.json();
+}
+
+/* ================= NAV / ROUTING ================= */
+function renderNav() {
+  const nav = document.getElementById('navBar');
+  nav.innerHTML = '';
+  if (state.isAdminMode) {
+    nav.innerHTML = `<button onclick="location.search=''">Exit Admin</button>`;
+    return;
+  }
+  if (state.codename) {
+    nav.innerHTML = `
+      <button class="${state.view==='dashboard'?'active':''}" onclick="goTo('dashboard')">My Dashboard</button>
+      <button onclick="logout()">Log Out</button>
+    `;
+  } else {
+    nav.innerHTML = `
+      <button class="${state.view==='setup'?'active':''}" onclick="goTo('setup')">Set Up</button>
+      <button class="${state.view==='login'?'active':''}" onclick="goTo('login')">Login</button>
+    `;
+  }
+}
+
+function logout() {
+  localStorage.removeItem(LS_KEY);
+  state.codename = null;
+  goTo('login');
+}
+
+async function goTo(view) {
+  state.view = view;
+  renderNav();
+  if (view === 'dashboard') await renderDashboard();
+  else if (view === 'setup') await renderSetup();
+  else if (view === 'login') renderLogin();
+}
+
+async function init() {
+  const s = await api('getPublicSettings', {});
+  state.publicSettings = s;
+  if (s.announcement) {
+    const el = document.getElementById('announcement');
+    el.textContent = '📣 ' + s.announcement;
+    el.style.display = 'block';
+  }
+  if (state.isAdminMode) {
+    renderNav();
+    renderAdminLogin();
+    return;
+  }
+  renderNav();
+  if (state.codename) goTo('dashboard');
+  else goTo(s.setupEnabled ? 'setup' : 'login');
+}
+
+/* ================= SETUP ================= */
+async function renderSetup() {
+  const halls = (state.publicSettings.hallOptions || []).map(h => `<option value="${h}">${h}</option>`).join('');
+  const enabled = state.publicSettings.setupEnabled;
+  document.getElementById('main').innerHTML = `
+    <div class="card">
+      <h2>Sign Up</h2>
+      ${enabled ? '' : '<div class="output show error">Signups are currently closed.</div>'}
+      <div style="${enabled ? '' : 'opacity:0.4; pointer-events:none;'}">
+        <label>Real First and Last Name:</label>
+        <input id="su_name" type="text">
+        <label>Codename (creative, no spaces, keep it secret!):</label>
+        <input id="su_codename" type="text">
+        <label>Choose a 4-digit password (remember this — it's needed for every action):</label>
+        <input id="su_password" type="text" maxlength="4" inputmode="numeric" placeholder="e.g. 4821">
+        <label>Phone:</label>
+        <input id="su_phone" type="tel">
+        <label>Hall:</label>
+        <select id="su_hall">${halls}</select>
+        <button class="primary" onclick="submitSignup()">Submit</button>
+      </div>
+      <div id="su_output" class="output"></div>
+    </div>
+  `;
+}
+
+async function submitSignup() {
+  const params = {
+    officialName: document.getElementById('su_name').value.trim(),
+    codename: document.getElementById('su_codename').value.trim(),
+    password: document.getElementById('su_password').value.trim(),
+    phone: document.getElementById('su_phone').value.trim(),
+    hall: document.getElementById('su_hall').value
+  };
+  const out = document.getElementById('su_output');
+  out.className = 'output show'; out.textContent = 'Submitting...';
+  const data = await api('signup', params);
+  if (data.error) {
+    out.className = 'output show error'; out.textContent = data.error;
+  } else {
+    out.className = 'output show success';
+    out.textContent = 'Welcome to the game! Remember your codename and password — screenshot this if needed, then head to Login.';
+  }
+}
+
+/* ================= LOGIN ================= */
+function renderLogin() {
+  document.getElementById('main').innerHTML = `
+    <div class="card">
+      <h2>Login</h2>
+      <label>Codename:</label>
+      <input id="li_codename" type="text">
+      <label>4-digit Password:</label>
+      <input id="li_password" type="text" maxlength="4" inputmode="numeric">
+      <button class="primary" onclick="submitLogin()">Login</button>
+      <div id="li_output" class="output"></div>
+    </div>
+  `;
+}
+
+async function submitLogin() {
+  const codename = document.getElementById('li_codename').value.trim();
+  const password = document.getElementById('li_password').value.trim();
+  const out = document.getElementById('li_output');
+  out.className = 'output show'; out.textContent = 'Checking...';
+  const data = await api('login', { codename, password });
+  if (data.error) {
+    out.className = 'output show error'; out.textContent = data.error;
+    return;
+  }
+  localStorage.setItem(LS_KEY, codename);
+  state.codename = codename;
+  renderNav();
+  goTo('dashboard');
+}
+
+/* ================= DASHBOARD ================= */
+const ROLE_INSTRUCTIONS = {
+  citizen: `CITIZEN: Talk to other players to figure out who the mafia are. Vote against someone you suspect below — you need others to also vote before they're eliminated. Be careful, you might vote out a teammate! Casting a vote uses your cooldown once it actually results in an elimination.`,
+  detective: `DETECTIVE: Keep your role secret! You get one guess per cooldown period. If your guess is correct, subtly tip off citizens to vote that player out — don't reveal you're the detective.`,
+  mafia: `MAFIA: Get a player alone, reveal you're mafia, get their codename, tell them they're eliminated and must stay silent, then carry on as normal. Officially eliminate them below. Blend in as a citizen when helpful — your codename also works in the citizen voting section.`
+};
+
+async function renderDashboard() {
+  document.getElementById('main').innerHTML = `<div class="card"><div class="output show">Loading your dashboard...</div></div>`;
+  const data = await api('getDashboard', { codename: state.codename });
+  if (data.error) {
+    localStorage.removeItem(LS_KEY);
+    state.codename = null;
+    renderNav();
+    goTo('login');
+    return;
+  }
+  state.dashboard = data;
+  renderDashboardBody();
+}
+
+function cooldownLine(cd) {
+  if (!cd) return '';
+  return cd.ready
+    ? `<div class="status-line">✅ Ready to act now.</div>`
+    : `<div class="status-line">⏳ On cooldown — ${cd.remaining} remaining.</div>`;
+}
+
+function renderDashboardBody() {
+  const d = state.dashboard;
+  let html = `<div class="card"><h2>Welcome, ${d.official_name}</h2>`;
+
+  if (!d.gameActive) {
+    html += `<div class="output show">The game has ended. Thanks for playing!</div></div>`;
+    document.getElementById('main').innerHTML = html;
+    return;
+  }
+  if (!d.dashboardEnabled) {
+    html += `<div class="output show">The dashboard is temporarily disabled by the admin. Check back soon.</div></div>`;
+    document.getElementById('main').innerHTML = html;
+    return;
+  }
+  if (d.status !== 'active') {
+    html += `<div class="output show error">You have been eliminated. Please do not discuss gameplay with active players — just say "check the website."</div></div>`;
+    document.getElementById('main').innerHTML = html;
+    return;
+  }
+  if (!d.role) {
+    html += `<div class="output show">Your role hasn't been assigned yet. Check back once the admin starts the game.</div></div>`;
+    document.getElementById('main').innerHTML = html;
+    return;
+  }
+
+  html += `<div class="instructions">${ROLE_INSTRUCTIONS[d.role] || ''}</div></div>`;
+
+  if (d.role === 'mafia') html += mafiaSection(d);
+  if (d.role === 'detective') html += detectiveSection(d);
+
+  const canVote = d.role === 'citizen' || d.citizenCooldown !== undefined;
+  if (canVote) html += citizenSection(d);
+
+  document.getElementById('main').innerHTML = html;
+}
+
+function mafiaSection(d) {
+  return `
+    <div class="card">
+      <h2>Mafia Action</h2>
+      ${cooldownLine(d.mafiaCooldown)}
+      <label>Target's codename:</label>
+      <input id="m_target">
+      <button class="primary" onclick="mafiaVerify()">Verify Target</button>
+      <div id="m_verify_out" class="output"></div>
+      <div id="m_confirm" style="display:none; margin-top:10px;">
+        <label>Your password:</label>
+        <input id="m_password" maxlength="4" inputmode="numeric">
+        <button class="primary danger" onclick="mafiaEliminate()">Eliminate Target</button>
+      </div>
+      <div id="m_final_out" class="output"></div>
+    </div>`;
+}
+async function mafiaVerify() {
+  const target = document.getElementById('m_target').value.trim();
+  const out = document.getElementById('m_verify_out');
+  out.className = 'output show'; out.textContent = 'Checking...';
+  const data = await api('verifyMafiaTarget', { targetCodename: target });
+  if (data.error) { out.className = 'output show error'; out.textContent = data.error; document.getElementById('m_confirm').style.display='none'; return; }
+  out.className = 'output show success'; out.textContent = 'Target verified.';
+  document.getElementById('m_confirm').style.display = 'block';
+}
+async function mafiaEliminate() {
+  const target = document.getElementById('m_target').value.trim();
+  const password = document.getElementById('m_password').value.trim();
+  const out = document.getElementById('m_final_out');
+  out.className = 'output show'; out.textContent = 'Processing...';
+  const data = await api('mafiaEliminate', { codename: state.codename, password, targetCodename: target });
+  if (data.error) { out.className = 'output show error'; out.textContent = data.error; return; }
+  out.className = 'output show success'; out.textContent = data.success;
+  setTimeout(() => goTo('dashboard'), 1800);
+}
+
+function detectiveSection(d) {
+  return `
+    <div class="card">
+      <h2>Detective Guess</h2>
+      ${cooldownLine(d.detectiveCooldown)}
+      <label>Target's real name:</label>
+      <input id="dt_target">
+      <button class="primary" onclick="detectiveVerify()">Verify Target</button>
+      <div id="dt_verify_out" class="output"></div>
+      <div id="dt_confirm" style="display:none; margin-top:10px;">
+        <label>Your password:</label>
+        <input id="dt_password" maxlength="4" inputmode="numeric">
+        <button class="primary" onclick="detectiveGuess()">Submit Guess</button>
+      </div>
+      <div id="dt_final_out" class="output"></div>
+    </div>`;
+}
+async function detectiveVerify() {
+  const target = document.getElementById('dt_target').value.trim();
+  const out = document.getElementById('dt_verify_out');
+  out.className = 'output show'; out.textContent = 'Checking...';
+  const data = await api('verifyDetectiveTarget', { targetOfficialName: target });
+  if (data.error) { out.className = 'output show error'; out.textContent = data.error; document.getElementById('dt_confirm').style.display='none'; return; }
+  out.className = 'output show success'; out.textContent = 'Target verified.';
+  document.getElementById('dt_confirm').style.display = 'block';
+}
+async function detectiveGuess() {
+  const target = document.getElementById('dt_target').value.trim();
+  const password = document.getElementById('dt_password').value.trim();
+  const out = document.getElementById('dt_final_out');
+  out.className = 'output show'; out.textContent = 'Processing...';
+  const data = await api('detectiveGuess', { codename: state.codename, password, targetOfficialName: target });
+  if (data.error) { out.className = 'output show error'; out.textContent = data.error; return; }
+  out.className = 'output show success'; out.textContent = data.success;
+  setTimeout(() => goTo('dashboard'), 1800);
+}
+
+function citizenSection(d) {
+  if (d.activeVote) {
+    return `
+      <div class="card">
+        <h2>Your Active Vote</h2>
+        <div class="status-line">Votes so far: ${d.activeVote.votesSoFar} / ${d.activeVote.votesRequired}</div>
+        <div class="small-note">Votes expire automatically after a while if the threshold isn't reached.</div>
+        <label>Your password (to retract):</label>
+        <input id="c_password_retract" maxlength="4" inputmode="numeric">
+        <button class="primary secondary" onclick="citizenRetract()">Retract My Vote</button>
+        <div id="c_retract_out" class="output"></div>
+      </div>`;
+  }
+  return `
+    <div class="card">
+      <h2>Citizen Vote</h2>
+      ${cooldownLine(d.citizenCooldown)}
+      <label>Suspect's real name:</label>
+      <input id="c_target">
+      <button class="primary" onclick="citizenVerify()">Verify Target</button>
+      <div id="c_verify_out" class="output"></div>
+      <div id="c_confirm" style="display:none; margin-top:10px;">
+        <label>Your password:</label>
+        <input id="c_password" maxlength="4" inputmode="numeric">
+        <button class="primary" onclick="citizenVote()">Cast Vote</button>
+      </div>
+      <div id="c_final_out" class="output"></div>
+    </div>`;
+}
+async function citizenVerify() {
+  const target = document.getElementById('c_target').value.trim();
+  const out = document.getElementById('c_verify_out');
+  out.className = 'output show'; out.textContent = 'Checking...';
+  const data = await api('verifyCitizenTarget', { targetOfficialName: target });
+  if (data.error) { out.className = 'output show error'; out.textContent = data.error; document.getElementById('c_confirm').style.display='none'; return; }
+  out.className = 'output show success'; out.textContent = 'Target verified.';
+  document.getElementById('c_confirm').style.display = 'block';
+}
+async function citizenVote() {
+  const target = document.getElementById('c_target').value.trim();
+  const password = document.getElementById('c_password').value.trim();
+  const out = document.getElementById('c_final_out');
+  out.className = 'output show'; out.textContent = 'Processing...';
+  const data = await api('citizenVote', { codename: state.codename, password, targetOfficialName: target });
+  if (data.error) { out.className = 'output show error'; out.textContent = data.error; return; }
+  out.className = 'output show success';
+  out.textContent = data.success + (data.votesSoFar ? ` (${data.votesSoFar}/${data.votesRequired})` : '');
+  setTimeout(() => goTo('dashboard'), 1800);
+}
+async function citizenRetract() {
+  const password = document.getElementById('c_password_retract').value.trim();
+  const out = document.getElementById('c_retract_out');
+  out.className = 'output show'; out.textContent = 'Processing...';
+  const data = await api('citizenRetractVote', { codename: state.codename, password });
+  if (data.error) { out.className = 'output show error'; out.textContent = data.error; return; }
+  out.className = 'output show success'; out.textContent = data.success;
+  setTimeout(() => goTo('dashboard'), 1200);
+}
+
+/* ================= ADMIN ================= */
+let adminPassword = null;
+
+function renderAdminLogin() {
+  document.getElementById('main').innerHTML = `
+    <div class="card">
+      <h2>🔒 Admin Login</h2>
+      <label>Admin Password:</label>
+      <input id="admin_pw" type="password">
+      <button class="primary" onclick="submitAdminLogin()">Enter</button>
+      <div id="admin_login_out" class="output"></div>
+    </div>`;
+}
+async function submitAdminLogin() {
+  const pw = document.getElementById('admin_pw').value.trim();
+  const out = document.getElementById('admin_login_out');
+  out.className = 'output show'; out.textContent = 'Checking...';
+  const data = await api('adminLogin', { adminPassword: pw });
+  if (data.error) { out.className = 'output show error'; out.textContent = data.error; return; }
+  adminPassword = pw;
+  renderAdminPanel();
+}
+
+async function renderAdminPanel() {
+  document.getElementById('main').innerHTML = `<div class="card"><div class="output show">Loading admin data...</div></div>`;
+  const data = await api('adminGetAll', { adminPassword });
+  if (data.error) { renderAdminLogin(); return; }
+
+  const settingsRows = Object.keys(data.settings).map(k => `
+    <tr>
+      <td>${k}</td>
+      <td><input style="width:100%; padding:4px;" id="set_${k}" value="${String(data.settings[k]).replace(/"/g,'&quot;')}"></td>
+      <td><button class="secondary" style="width:auto; padding:4px 10px;" onclick="saveSetting('${k}')">Save</button></td>
+    </tr>`).join('');
+
+  const playerRows = data.players.map(pl => `
+    <tr>
+      <td>${pl.official_name}</td>
+      <td>${pl.codename}</td>
+      <td>
+        <select id="role_${pl.codename}">
+          <option value="" ${!pl.role?'selected':''}>—</option>
+          <option value="citizen" ${pl.role==='citizen'?'selected':''}>citizen</option>
+          <option value="mafia" ${pl.role==='mafia'?'selected':''}>mafia</option>
+          <option value="detective" ${pl.role==='detective'?'selected':''}>detective</option>
+        </select>
+      </td>
+      <td>
+        <select id="status_${pl.codename}">
+          <option value="active" ${pl.status==='active'?'selected':''}>active</option>
+          <option value="eliminated" ${pl.status==='eliminated'?'selected':''}>eliminated</option>
+        </select>
+      </td>
+      <td><button class="secondary" style="width:auto; padding:4px 10px;" onclick="savePlayer('${pl.codename}')">Save</button></td>
+    </tr>`).join('');
+
+  const logRows = data.log.map(l => `<div class="player-list-item"><b>${new Date(l.time).toLocaleString()}</b> — ${l.message}</div>`).join('');
+
+  document.getElementById('main').innerHTML = `
+    <div class="card" style="max-width:700px;">
+      <h2>⚙️ Settings</h2>
+      <table><tbody>${settingsRows}</tbody></table>
+    </div>
+    <div class="card" style="max-width:700px;">
+      <h2>👥 Players</h2>
+      <table><thead><tr><th>Name</th><th>Codename</th><th>Role</th><th>Status</th><th></th></tr></thead>
+      <tbody>${playerRows}</tbody></table>
+      <button class="primary danger" style="margin-top:16px;" onclick="resetGame()">⚠️ Reset Entire Game</button>
+    </div>
+    <div class="card" style="max-width:700px;">
+      <h2>📜 Game Log (latest 200)</h2>
+      <div style="max-height:300px; overflow-y:auto;">${logRows || 'No log entries yet.'}</div>
+    </div>
+  `;
+}
+
+async function saveSetting(key) {
+  const value = document.getElementById('set_' + key).value;
+  await api('adminUpdateSetting', { adminPassword, key, value });
+  renderAdminPanel();
+}
+async function savePlayer(codename) {
+  const role = document.getElementById('role_' + codename).value;
+  const status = document.getElementById('status_' + codename).value;
+  await api('adminSetRole', { adminPassword, codename, role });
+  await api('adminSetStatus', { adminPassword, codename, status });
+  renderAdminPanel();
+}
+async function resetGame() {
+  if (!confirm('This will reset ALL players to active and clear all roles. Are you sure?')) return;
+  await api('adminResetGame', { adminPassword });
+  renderAdminPanel();
+}
+
+/* ================= BOOT ================= */
+init();
+</script>
+</body>
+</html>
