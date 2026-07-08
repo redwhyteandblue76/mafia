@@ -587,6 +587,11 @@ async function submitAdminLogin() {
 
 const BOOLEAN_SETTING_KEYS = ['setupEnabled', 'dashboardEnabled', 'gameActive', 'allowMafiaInCitizenVotes', 'allowDetectiveInCitizenVotes'];
 const TEXTAREA_SETTING_KEYS = ['mafiaInstructions', 'detectiveInstructions', 'citizenInstructions', 'announcementMessage'];
+const DEFAULT_INSTRUCTIONS = {
+  mafiaInstructions: `MAFIA: Get a player alone, reveal you're mafia, get their codename, tell them they're eliminated and must stay silent, then carry on as normal. Officially eliminate them below. Blend in as a citizen when helpful — your codename also works in the citizen voting section.`,
+  detectiveInstructions: `DETECTIVE: Keep your role secret! You get one guess per cooldown period. If your guess is correct, subtly tip off citizens to vote that player out — don't reveal you're the detective.`,
+  citizenInstructions: `CITIZEN: Talk to other players to figure out who the mafia are. Vote against someone you suspect below — you need others to also vote before they're eliminated. Be careful, you might vote out a teammate! Casting a vote uses your cooldown once it actually results in an elimination.`
+};
 let lastAdminData = null;
 
 async function renderAdminPanel() {
@@ -609,11 +614,15 @@ async function renderAdminPanel() {
         </tr>`;
     }
     if (TEXTAREA_SETTING_KEYS.includes(k)) {
+      const hasDefault = DEFAULT_INSTRUCTIONS.hasOwnProperty(k);
       return `
         <tr>
           <td style="vertical-align:top;">${k}</td>
           <td><textarea style="width:100%; padding:6px; min-height:80px; font-family:'Inter',sans-serif; font-size:12.5px; background:#0d0d0d; color:var(--text); border:1px solid #333; border-radius:3px;" id="set_${k}">${String(data.settings[k]).replace(/</g,'&lt;')}</textarea></td>
-          <td style="vertical-align:top;"><button class="secondary" style="width:auto; padding:4px 10px;" onclick="saveSetting('${k}')">Save</button></td>
+          <td style="vertical-align:top; white-space:nowrap;">
+            <button class="secondary" style="width:auto; padding:4px 10px;" onclick="saveSetting('${k}')">Save</button>
+            ${hasDefault ? `<button class="secondary" style="width:auto; padding:4px 10px; margin-top:6px;" onclick="restoreDefaultInstruction('${k}')">Restore Default</button>` : ''}
+          </td>
         </tr>`;
     }
     return `
@@ -707,6 +716,13 @@ async function randomizeRoles() {
 async function saveSetting(key, chipValue) {
   const value = chipValue !== undefined ? chipValue : document.getElementById('set_' + key).value;
   await api('adminUpdateSetting', { adminPassword, key, value });
+  renderAdminPanel();
+}
+
+async function restoreDefaultInstruction(key) {
+  if (!DEFAULT_INSTRUCTIONS[key]) return;
+  if (!confirm('Restore the built-in default text for ' + key + '? This overwrites your current edit.')) return;
+  await api('adminUpdateSetting', { adminPassword, key, value: DEFAULT_INSTRUCTIONS[key] });
   renderAdminPanel();
 }
 async function savePlayer(codename) {
