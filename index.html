@@ -3,41 +3,64 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Floor 3 Squad — Continuous Mafia</title>
+<title>Continuous Mafia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-  :root { --accent: #76c7c0; }
+  :root {
+    --bg: #0a0a0a;
+    --card: #161616;
+    --card-border: rgba(95, 179, 217, 0.22);
+    --accent: #5fb3d9;
+    --accent-dim: #3d7c94;
+    --danger: #c23b3b;
+    --danger-dim: #7a2626;
+    --text: #e8e8e8;
+    --muted: #8a8a8a;
+  }
   * { box-sizing: border-box; }
   body {
-    font-family: 'Courier New', monospace;
-    background-color: #000;
-    color: #fff;
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg);
+    color: var(--text);
     margin: 0;
     min-height: 100vh;
   }
+  h1, h2, .oswald {
+    font-family: 'Oswald', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .mono, input, select {
+    font-family: 'IBM Plex Mono', monospace;
+  }
   header {
-    background: #111;
-    border-bottom: 2px solid #fff;
-    padding: 14px 16px;
+    background: #0f0f0f;
+    border-bottom: 2px solid var(--card-border);
+    padding: 16px 20px;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     gap: 10px;
   }
-  header h1 { font-size: 18px; margin: 0; }
+  header h1 { font-size: 17px; margin: 0; font-weight: 600; color: var(--text); }
+  header h1 span { color: var(--accent); }
   nav { display: flex; gap: 8px; flex-wrap: wrap; }
   nav button {
-    background: #333; color: #fff; border: 1px solid #fff;
-    padding: 8px 14px; border-radius: 4px; cursor: pointer;
-    font-family: inherit; font-size: 13px;
+    background: transparent; color: var(--muted); border: 1px solid #333;
+    padding: 8px 16px; border-radius: 3px; cursor: pointer;
+    font-family: 'Oswald', sans-serif; font-size: 12px; letter-spacing: 0.08em;
+    text-transform: uppercase; transition: all 0.15s;
   }
-  nav button:hover { background: #444; }
-  nav button.active { background: var(--accent); color: #000; font-weight: bold; }
+  nav button:hover { border-color: var(--accent); color: var(--text); }
+  nav button.active { background: var(--accent); color: #08181e; border-color: var(--accent); font-weight: 600; }
 
   #announcement {
-    background: #222; border-bottom: 1px solid #555;
+    background: #12181a; border-bottom: 1px solid var(--card-border);
     color: var(--accent); text-align: center;
-    padding: 8px; font-size: 14px; display: none;
+    padding: 9px; font-size: 13.5px; display: none; letter-spacing: 0.02em;
   }
 
   main {
@@ -45,52 +68,103 @@
     padding: 30px 16px 60px;
   }
   .card {
-    background-color: #222; padding: 24px; border: 2px solid #fff;
-    border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    background-color: var(--card); padding: 24px;
+    border: 1px solid var(--card-border); border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
     width: 100%; max-width: 380px; margin-bottom: 20px;
+    position: relative;
   }
-  .card h2 { margin-top: 0; text-align: center; font-size: 18px; }
-  label { display: block; margin-top: 12px; margin-bottom: 4px; font-size: 13px; }
+  .card h2 {
+    margin-top: 0; text-align: center; font-size: 17px; font-weight: 500;
+    color: var(--text); padding-bottom: 10px; border-bottom: 1px solid #262626; margin-bottom: 16px;
+  }
+  .tab {
+    position: absolute; top: -11px; left: 20px;
+    background: var(--bg); padding: 2px 10px;
+    font-family: 'Oswald', sans-serif; font-size: 10.5px; letter-spacing: 0.12em;
+    text-transform: uppercase; border: 1px solid;
+  }
+  .tab.mafia { color: var(--danger); border-color: var(--danger); }
+  .tab.detective, .tab.citizen { color: var(--accent); border-color: var(--accent); }
+
+  label { display: block; margin-top: 12px; margin-bottom: 4px; font-size: 12.5px; color: var(--muted); font-family: 'Inter', sans-serif; letter-spacing: 0.02em; }
   input, select {
-    width: 100%; padding: 10px; border: 2px solid #fff; border-radius: 4px;
-    background-color: #444; color: #fff; font-family: inherit;
+    width: 100%; padding: 10px; border: 1px solid #333; border-radius: 3px;
+    background-color: #0d0d0d; color: var(--text); font-size: 14px;
   }
+  input:focus, select:focus { outline: none; border-color: var(--accent); }
   button.primary {
-    padding: 10px; border: none; border-radius: 4px; background-color: #555;
-    color: #fff; cursor: pointer; margin-top: 14px; width: 100%;
-    font-family: inherit; font-weight: bold;
+    padding: 11px; border: none; border-radius: 3px; background-color: var(--accent);
+    color: #08181e; cursor: pointer; margin-top: 16px; width: 100%;
+    font-family: 'Oswald', sans-serif; font-weight: 600; letter-spacing: 0.06em;
+    text-transform: uppercase; font-size: 13.5px; transition: background 0.15s;
   }
-  button.primary:hover { background-color: var(--accent); color: #000; }
+  button.primary:hover { background-color: #7fc4e6; }
   button.secondary {
-    padding: 8px; border: 1px solid #888; border-radius: 4px; background: transparent;
-    color: #ccc; cursor: pointer; margin-top: 8px; width: 100%; font-family: inherit;
+    padding: 8px; border: 1px solid #444; border-radius: 3px; background: transparent;
+    color: var(--muted); cursor: pointer; margin-top: 8px; width: 100%;
+    font-family: 'Oswald', sans-serif; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase;
   }
-  button.danger { background-color: #7a2222; }
+  button.secondary:hover { border-color: var(--accent); color: var(--text); }
+  button.danger { background-color: var(--danger); color: #fff; }
+  button.danger:hover { background-color: #d64f4f; }
   .output {
-    margin-top: 10px; padding: 10px; border: 1px solid #fff;
-    background-color: #333; border-radius: 4px; font-weight: bold;
-    white-space: pre-wrap; text-align: center; font-size: 14px; display: none;
+    margin-top: 10px; padding: 10px; border: 1px solid #333;
+    background-color: #0d0d0d; border-radius: 3px; font-weight: 500;
+    white-space: pre-wrap; text-align: center; font-size: 13.5px; display: none;
+    font-family: 'Inter', sans-serif;
   }
   .output.show { display: block; }
-  .output.error { border-color: #e77; color: #f88; }
+  .output.error { border-color: var(--danger); color: #e88; }
   .output.success { border-color: var(--accent); color: var(--accent); }
   .instructions {
-    background: #1a1a1a; border-left: 3px solid var(--accent);
-    padding: 10px 12px; font-size: 12.5px; line-height: 1.5; margin-bottom: 16px;
-    white-space: pre-wrap;
+    background: #0f1416; border-left: 3px solid var(--accent);
+    padding: 10px 12px; font-size: 12.5px; line-height: 1.55; margin-bottom: 16px;
+    white-space: pre-wrap; color: #c8d8de; font-family: 'Inter', sans-serif;
   }
-  .status-line { font-size: 13px; color: #aaa; text-align: center; margin-top: 6px; }
-  .player-list-item { padding: 6px 0; border-bottom: 1px solid #333; font-size: 13.5px; }
-  table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
-  th, td { border: 1px solid #444; padding: 5px; text-align: left; }
-  th { background: #333; }
-  .small-note { font-size: 11px; color: #888; margin-top: 6px; text-align: center; }
+  .status-line { font-size: 13px; color: var(--muted); text-align: center; margin-top: 6px; font-family: 'Inter', sans-serif; }
+  .player-list-item {
+    padding: 8px 0; border-bottom: 1px solid #262626; font-size: 13.5px;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    font-family: 'Inter', sans-serif;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; font-family: 'Inter', sans-serif; }
+  th, td { border: 1px solid #2a2a2a; padding: 6px; text-align: left; }
+  th { background: #1a1a1a; font-family: 'Oswald', sans-serif; letter-spacing: 0.04em; text-transform: uppercase; font-size: 10.5px; color: var(--muted); }
+  .small-note { font-size: 11px; color: #666; margin-top: 6px; text-align: center; font-family: 'Inter', sans-serif; }
+
+  /* ==== STAMP — signature element ==== */
+  .stamp {
+    display: inline-block;
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    font-size: 10.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 3px 9px;
+    border: 2px solid;
+    border-radius: 2px;
+    transform: rotate(-6deg);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .stamp.active {
+    color: var(--accent);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px rgba(95,179,217,0.35) inset;
+  }
+  .stamp.eliminated {
+    color: var(--danger);
+    border-color: var(--danger);
+    transform: rotate(-8deg);
+    box-shadow: 0 0 0 1px rgba(194,59,59,0.35) inset;
+  }
 </style>
 </head>
 <body>
 
 <header>
-  <h1>The Mafia</h1>
+  <h1><span>Continuous Mafia</span></h1>
   <nav id="navBar"></nav>
 </header>
 <div id="announcement"></div>
@@ -110,6 +184,21 @@ let state = {
   dashboard: null,
   publicSettings: null
 };
+
+/* ================= RETURN-TO-DASHBOARD HELPER ================= */
+function scheduleReturnToDashboard(outEl, seconds) {
+  seconds = seconds || 8;
+  let remaining = seconds;
+  const noteId = 'return_note_' + Math.random().toString(36).slice(2);
+  outEl.insertAdjacentHTML('afterend', `<div class="small-note" id="${noteId}">Returning to dashboard in ${remaining}s...</div>`);
+  const noteEl = document.getElementById(noteId);
+  const interval = setInterval(() => {
+    remaining--;
+    if (noteEl) noteEl.textContent = `Returning to dashboard in ${remaining}s...`;
+    if (remaining <= 0) clearInterval(interval);
+  }, 1000);
+  setTimeout(() => goTo('dashboard'), seconds * 1000);
+}
 
 /* ================= API HELPER ================= */
 async function api(action, params) {
@@ -131,12 +220,14 @@ function renderNav() {
   if (state.codename) {
     nav.innerHTML = `
       <button class="${state.view==='dashboard'?'active':''}" onclick="goTo('dashboard')">My Dashboard</button>
+      <button class="${state.view==='playerlist'?'active':''}" onclick="goTo('playerlist')">Player List</button>
       <button onclick="logout()">Log Out</button>
     `;
   } else {
     nav.innerHTML = `
       <button class="${state.view==='setup'?'active':''}" onclick="goTo('setup')">Set Up</button>
       <button class="${state.view==='login'?'active':''}" onclick="goTo('login')">Login</button>
+      <button class="${state.view==='playerlist'?'active':''}" onclick="goTo('playerlist')">Player List</button>
     `;
   }
 }
@@ -153,6 +244,23 @@ async function goTo(view) {
   if (view === 'dashboard') await renderDashboard();
   else if (view === 'setup') await renderSetup();
   else if (view === 'login') renderLogin();
+  else if (view === 'playerlist') await renderPlayerList();
+}
+
+async function renderPlayerList() {
+  document.getElementById('main').innerHTML = `<div class="card"><div class="output show">Loading player list...</div></div>`;
+  const data = await api('getPlayerList', {});
+  const items = (data.players || []).map(line => {
+    const eliminated = line.includes('eliminated');
+    const name = line.split(' is currently active.')[0].split(' was eliminated')[0];
+    return `<div class="player-list-item"><span>${name}</span><span class="stamp ${eliminated ? 'eliminated' : 'active'}">${eliminated ? 'Eliminated' : 'Active'}</span></div>`;
+  }).join('');
+  document.getElementById('main').innerHTML = `
+    <div class="card">
+      <h2>Player List</h2>
+      <button class="secondary" onclick="renderPlayerList()">Refresh</button>
+      <div style="margin-top:12px; max-height:400px; overflow-y:auto;">${items || 'No players yet.'}</div>
+    </div>`;
 }
 
 async function init() {
@@ -314,9 +422,19 @@ function renderDashboardBody() {
 }
 
 function mafiaSection(d) {
+  const team = (d.mafiaTeam || []).map(m => {
+    const eliminated = m.status !== 'active';
+    return `<div class="player-list-item"><span>${m.official_name}</span><span class="stamp ${eliminated ? 'eliminated' : 'active'}">${eliminated ? 'Eliminated' : 'Active'}</span></div>`;
+  }).join('');
   return `
     <div class="card">
-      <h2>Mafia Action</h2>
+      <span class="tab mafia">Mafia</span>
+      <h2>Your Team</h2>
+      <div style="max-height:220px; overflow-y:auto;">${team || 'No teammates found.'}</div>
+    </div>
+    <div class="card">
+      <span class="tab mafia">Mafia</span>
+      <h2>Eliminate a Player</h2>
       ${cooldownLine(d.mafiaCooldown)}
       <label>Target's codename:</label>
       <input id="m_target">
@@ -347,13 +465,14 @@ async function mafiaEliminate() {
   const data = await api('mafiaEliminate', { codename: state.codename, password, targetCodename: target });
   if (data.error) { out.className = 'output show error'; out.textContent = data.error; return; }
   out.className = 'output show success'; out.textContent = data.success;
-  setTimeout(() => goTo('dashboard'), 1800);
+  scheduleReturnToDashboard(out, 8);
 }
 
 function detectiveSection(d) {
   return `
     <div class="card">
-      <h2>Detective Guess</h2>
+      <span class="tab detective">Detective</span>
+      <h2>Guess a Suspect</h2>
       ${cooldownLine(d.detectiveCooldown)}
       <label>Target's real name:</label>
       <input id="dt_target">
@@ -384,13 +503,14 @@ async function detectiveGuess() {
   const data = await api('detectiveGuess', { codename: state.codename, password, targetOfficialName: target });
   if (data.error) { out.className = 'output show error'; out.textContent = data.error; return; }
   out.className = 'output show success'; out.textContent = data.success;
-  setTimeout(() => goTo('dashboard'), 1800);
+  scheduleReturnToDashboard(out, 8);
 }
 
 function citizenSection(d) {
   if (d.activeVote) {
     return `
       <div class="card">
+        <span class="tab citizen">Vote</span>
         <h2>Your Active Vote</h2>
         <div class="status-line">Votes so far: ${d.activeVote.votesSoFar} / ${d.activeVote.votesRequired}</div>
         <div class="small-note">Votes expire automatically after a while if the threshold isn't reached.</div>
@@ -402,7 +522,8 @@ function citizenSection(d) {
   }
   return `
     <div class="card">
-      <h2>Citizen Vote</h2>
+      <span class="tab citizen">Vote</span>
+      <h2>Cast a Vote</h2>
       ${cooldownLine(d.citizenCooldown)}
       <label>Suspect's real name:</label>
       <input id="c_target">
@@ -434,7 +555,7 @@ async function citizenVote() {
   if (data.error) { out.className = 'output show error'; out.textContent = data.error; return; }
   out.className = 'output show success';
   out.textContent = data.success + (data.votesSoFar ? ` (${data.votesSoFar}/${data.votesRequired})` : '');
-  setTimeout(() => goTo('dashboard'), 1800);
+  scheduleReturnToDashboard(out, 8);
 }
 async function citizenRetract() {
   const password = document.getElementById('c_password_retract').value.trim();
@@ -443,7 +564,7 @@ async function citizenRetract() {
   const data = await api('citizenRetractVote', { codename: state.codename, password });
   if (data.error) { out.className = 'output show error'; out.textContent = data.error; return; }
   out.className = 'output show success'; out.textContent = data.success;
-  setTimeout(() => goTo('dashboard'), 1200);
+  scheduleReturnToDashboard(out, 5);
 }
 
 /* ================= ADMIN ================= */
@@ -469,22 +590,46 @@ async function submitAdminLogin() {
   renderAdminPanel();
 }
 
+const BOOLEAN_SETTING_KEYS = ['setupEnabled', 'dashboardEnabled', 'gameActive', 'allowMafiaInCitizenVotes', 'allowDetectiveInCitizenVotes'];
+let lastAdminData = null;
+
 async function renderAdminPanel() {
   document.getElementById('main').innerHTML = `<div class="card"><div class="output show">Loading admin data...</div></div>`;
   const data = await api('adminGetAll', { adminPassword });
   if (data.error) { renderAdminLogin(); return; }
+  lastAdminData = data;
 
-  const settingsRows = Object.keys(data.settings).map(k => `
-    <tr>
-      <td>${k}</td>
-      <td><input style="width:100%; padding:4px;" id="set_${k}" value="${String(data.settings[k]).replace(/"/g,'&quot;')}"></td>
-      <td><button class="secondary" style="width:auto; padding:4px 10px;" onclick="saveSetting('${k}')">Save</button></td>
-    </tr>`).join('');
+  const settingsRows = Object.keys(data.settings).map(k => {
+    if (BOOLEAN_SETTING_KEYS.includes(k)) {
+      const isTrue = String(data.settings[k]).toUpperCase() === 'TRUE' || data.settings[k] === true;
+      return `
+        <tr>
+          <td>${k}</td>
+          <td>
+            <button class="secondary" style="width:auto; padding:4px 12px; ${isTrue?'background:var(--accent); color:#000; border-color:var(--accent);':''}" onclick="saveSetting('${k}', 'TRUE')">TRUE</button>
+            <button class="secondary" style="width:auto; padding:4px 12px; ${!isTrue?'background:#7a2222; color:#fff; border-color:#7a2222;':''}" onclick="saveSetting('${k}', 'FALSE')">FALSE</button>
+          </td>
+          <td></td>
+        </tr>`;
+    }
+    return `
+      <tr>
+        <td>${k}</td>
+        <td><input style="width:100%; padding:4px;" id="set_${k}" value="${String(data.settings[k]).replace(/"/g,'&quot;')}"></td>
+        <td><button class="secondary" style="width:auto; padding:4px 10px;" onclick="saveSetting('${k}')">Save</button></td>
+      </tr>`;
+  }).join('');
+
+  const totalPlayers = data.players.length;
+  const unassigned = data.players.filter(pl => !pl.role).length;
+  const mafiaCount = data.players.filter(pl => pl.role === 'mafia').length;
+  const detectiveCount = data.players.filter(pl => pl.role === 'detective').length;
+  const citizenCount = data.players.filter(pl => pl.role === 'citizen').length;
 
   const playerRows = data.players.map(pl => `
     <tr>
       <td>${pl.official_name}</td>
-      <td>${pl.codename}</td>
+      <td class="mono">${pl.codename}</td>
       <td>
         <select id="role_${pl.codename}">
           <option value="" ${!pl.role?'selected':''}>—</option>
@@ -499,6 +644,7 @@ async function renderAdminPanel() {
           <option value="eliminated" ${pl.status==='eliminated'?'selected':''}>eliminated</option>
         </select>
       </td>
+      <td><span class="stamp ${pl.status==='active'?'active':'eliminated'}" style="font-size:9px; padding:2px 6px;">${pl.status==='active'?'Active':'Out'}</span></td>
       <td><button class="secondary" style="width:auto; padding:4px 10px;" onclick="savePlayer('${pl.codename}')">Save</button></td>
     </tr>`).join('');
 
@@ -506,13 +652,27 @@ async function renderAdminPanel() {
 
   document.getElementById('main').innerHTML = `
     <div class="card" style="max-width:700px;">
+      <h2>🎲 Game Setup</h2>
+      <div class="status-line">${totalPlayers} player(s) signed up — ${unassigned} unassigned, ${mafiaCount} mafia, ${detectiveCount} detective(s), ${citizenCount} citizen(s).</div>
+      <label>Number of mafia:</label>
+      <input id="setup_numMafia" type="number" min="0" value="1">
+      <label>Number of detectives:</label>
+      <input id="setup_numDetectives" type="number" min="0" value="1">
+      <button class="primary" onclick="randomizeRoles()">Randomize Roles &amp; Start Game</button>
+      <div class="small-note">This resets everyone to active, clears cooldowns/votes, randomly assigns mafia + detective roles among ALL signed-up players, and makes the rest citizens.</div>
+      <div id="setup_out" class="output"></div>
+    </div>
+    <div class="card" style="max-width:700px;">
       <h2>⚙️ Settings</h2>
       <table><tbody>${settingsRows}</tbody></table>
     </div>
     <div class="card" style="max-width:700px;">
       <h2>👥 Players</h2>
-      <table><thead><tr><th>Name</th><th>Codename</th><th>Role</th><th>Status</th><th></th></tr></thead>
-      <tbody>${playerRows}</tbody></table>
+      <button class="secondary" id="revealPlayersBtn" onclick="revealPlayers()">🙈 Reveal Player List</button>
+      <div id="playersHidden" style="display:none; margin-top:12px;">
+        <table><thead><tr><th>Name</th><th>Codename</th><th>Role</th><th>Status</th><th></th><th></th></tr></thead>
+        <tbody>${playerRows}</tbody></table>
+      </div>
       <button class="primary danger" style="margin-top:16px;" onclick="resetGame()">⚠️ Reset Entire Game</button>
     </div>
     <div class="card" style="max-width:700px;">
@@ -522,8 +682,26 @@ async function renderAdminPanel() {
   `;
 }
 
-async function saveSetting(key) {
-  const value = document.getElementById('set_' + key).value;
+function revealPlayers() {
+  document.getElementById('playersHidden').style.display = 'block';
+  document.getElementById('revealPlayersBtn').style.display = 'none';
+}
+
+async function randomizeRoles() {
+  const numMafia = document.getElementById('setup_numMafia').value;
+  const numDetectives = document.getElementById('setup_numDetectives').value;
+  const out = document.getElementById('setup_out');
+  if (!confirm(`This resets ALL players to active and randomly assigns ${numMafia} mafia + ${numDetectives} detective(s), rest citizens. Continue?`)) return;
+  out.className = 'output show'; out.textContent = 'Assigning roles...';
+  const data = await api('adminRandomizeRoles', { adminPassword, numMafia, numDetectives });
+  if (data.error) { out.className = 'output show error'; out.textContent = data.error; return; }
+  out.className = 'output show success';
+  out.textContent = `Done! ${data.mafia} mafia, ${data.detectives} detective(s), ${data.citizens} citizen(s) out of ${data.total} players.`;
+  setTimeout(renderAdminPanel, 2500);
+}
+
+async function saveSetting(key, chipValue) {
+  const value = chipValue !== undefined ? chipValue : document.getElementById('set_' + key).value;
   await api('adminUpdateSetting', { adminPassword, key, value });
   renderAdminPanel();
 }
