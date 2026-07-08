@@ -164,7 +164,7 @@
 <body>
 
 <header>
-  <h1><span>Continuous Mafia</span></h1>
+  <h1>Continuous <span>Mafia</span></h1>
   <nav id="navBar"></nav>
 </header>
 <div id="announcement"></div>
@@ -358,12 +358,6 @@ async function submitLogin() {
 }
 
 /* ================= DASHBOARD ================= */
-const ROLE_INSTRUCTIONS = {
-  citizen: `CITIZEN: Talk to other players to figure out who the mafia are. Vote against someone you suspect below — you need others to also vote before they're eliminated. Be careful, you might vote out a teammate! Casting a vote uses your cooldown once it actually results in an elimination.`,
-  detective: `DETECTIVE: Keep your role secret! You get one guess per cooldown period. If your guess is correct, subtly tip off citizens to vote that player out — don't reveal you're the detective.`,
-  mafia: `MAFIA: Get a player alone, reveal you're mafia, get their codename, tell them they're eliminated and must stay silent, then carry on as normal. Officially eliminate them below. Blend in as a citizen when helpful — your codename also works in the citizen voting section.`
-};
-
 async function renderDashboard() {
   document.getElementById('main').innerHTML = `<div class="card"><div class="output show">Loading your dashboard...</div></div>`;
   const data = await api('getDashboard', { codename: state.codename });
@@ -410,7 +404,7 @@ function renderDashboardBody() {
     return;
   }
 
-  html += `<div class="instructions">${ROLE_INSTRUCTIONS[d.role] || ''}</div></div>`;
+  html += `<div class="instructions">${d.roleInstructions || ''}</div></div>`;
 
   if (d.role === 'mafia') html += mafiaSection(d);
   if (d.role === 'detective') html += detectiveSection(d);
@@ -512,6 +506,7 @@ function citizenSection(d) {
       <div class="card">
         <span class="tab citizen">Vote</span>
         <h2>Your Active Vote</h2>
+        <div class="status-line">Voting against: <b>${d.activeVote.targetOfficialName}</b></div>
         <div class="status-line">Votes so far: ${d.activeVote.votesSoFar} / ${d.activeVote.votesRequired}</div>
         <div class="small-note">Votes expire automatically after a while if the threshold isn't reached.</div>
         <label>Your password (to retract):</label>
@@ -591,6 +586,7 @@ async function submitAdminLogin() {
 }
 
 const BOOLEAN_SETTING_KEYS = ['setupEnabled', 'dashboardEnabled', 'gameActive', 'allowMafiaInCitizenVotes', 'allowDetectiveInCitizenVotes'];
+const TEXTAREA_SETTING_KEYS = ['mafiaInstructions', 'detectiveInstructions', 'citizenInstructions', 'announcementMessage'];
 let lastAdminData = null;
 
 async function renderAdminPanel() {
@@ -606,10 +602,18 @@ async function renderAdminPanel() {
         <tr>
           <td>${k}</td>
           <td>
-            <button class="secondary" style="width:auto; padding:4px 12px; ${isTrue?'background:var(--accent); color:#000; border-color:var(--accent);':''}" onclick="saveSetting('${k}', 'TRUE')">TRUE</button>
-            <button class="secondary" style="width:auto; padding:4px 12px; ${!isTrue?'background:#7a2222; color:#fff; border-color:#7a2222;':''}" onclick="saveSetting('${k}', 'FALSE')">FALSE</button>
+            <button class="secondary" style="width:auto; padding:4px 12px; ${isTrue?'background:var(--accent); color:#08181e; border-color:var(--accent);':''}" onclick="saveSetting('${k}', 'TRUE')">TRUE</button>
+            <button class="secondary" style="width:auto; padding:4px 12px; ${!isTrue?'background:var(--danger); color:#fff; border-color:var(--danger);':''}" onclick="saveSetting('${k}', 'FALSE')">FALSE</button>
           </td>
           <td></td>
+        </tr>`;
+    }
+    if (TEXTAREA_SETTING_KEYS.includes(k)) {
+      return `
+        <tr>
+          <td style="vertical-align:top;">${k}</td>
+          <td><textarea style="width:100%; padding:6px; min-height:80px; font-family:'Inter',sans-serif; font-size:12.5px; background:#0d0d0d; color:var(--text); border:1px solid #333; border-radius:3px;" id="set_${k}">${String(data.settings[k]).replace(/</g,'&lt;')}</textarea></td>
+          <td style="vertical-align:top;"><button class="secondary" style="width:auto; padding:4px 10px;" onclick="saveSetting('${k}')">Save</button></td>
         </tr>`;
     }
     return `
