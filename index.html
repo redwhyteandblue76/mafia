@@ -221,6 +221,7 @@ function renderNav() {
     nav.innerHTML = `
       <button class="${state.view==='dashboard'?'active':''}" onclick="goTo('dashboard')">My Dashboard</button>
       <button class="${state.view==='playerlist'?'active':''}" onclick="goTo('playerlist')">Player List</button>
+      <button class="${state.view==='instructions'?'active':''}" onclick="goTo('instructions')">Instructions</button>
       <button onclick="logout()">Log Out</button>
     `;
   } else {
@@ -228,6 +229,7 @@ function renderNav() {
       <button class="${state.view==='setup'?'active':''}" onclick="goTo('setup')">Set Up</button>
       <button class="${state.view==='login'?'active':''}" onclick="goTo('login')">Login</button>
       <button class="${state.view==='playerlist'?'active':''}" onclick="goTo('playerlist')">Player List</button>
+      <button class="${state.view==='instructions'?'active':''}" onclick="goTo('instructions')">Instructions</button>
     `;
   }
 }
@@ -245,6 +247,18 @@ async function goTo(view) {
   else if (view === 'setup') await renderSetup();
   else if (view === 'login') renderLogin();
   else if (view === 'playerlist') await renderPlayerList();
+  else if (view === 'instructions') await renderInstructions();
+}
+
+async function renderInstructions() {
+  document.getElementById('main').innerHTML = `<div class="card"><div class="output show">Loading instructions...</div></div>`;
+  const s = await api('getPublicSettings', {});
+  state.publicSettings = s;
+  document.getElementById('main').innerHTML = `
+    <div class="card" style="max-width:600px;">
+      <h2>How to Play</h2>
+      <div class="instructions" style="margin-bottom:0;">${(s.gameInstructions || 'No instructions have been set yet.').replace(/\n/g, '<br>')}</div>
+    </div>`;
 }
 
 async function renderPlayerList() {
@@ -283,6 +297,7 @@ async function init() {
 
 /* ================= SETUP ================= */
 async function renderSetup() {
+  const hallEnabled = state.publicSettings.hallFieldEnabled;
   const halls = (state.publicSettings.hallOptions || []).map(h => `<option value="${h}">${h}</option>`).join('');
   const enabled = state.publicSettings.setupEnabled;
   document.getElementById('main').innerHTML = `
@@ -298,8 +313,7 @@ async function renderSetup() {
         <input id="su_password" type="text" maxlength="4" inputmode="numeric" placeholder="e.g. 4821">
         <label>Phone:</label>
         <input id="su_phone" type="tel">
-        <label>Hall:</label>
-        <select id="su_hall">${halls}</select>
+        ${hallEnabled ? `<label>Hall:</label><select id="su_hall">${halls}</select>` : ''}
         <button class="primary" onclick="submitSignup()">Submit</button>
       </div>
       <div id="su_output" class="output"></div>
@@ -312,9 +326,10 @@ async function submitSignup() {
     officialName: document.getElementById('su_name').value.trim(),
     codename: document.getElementById('su_codename').value.trim(),
     password: document.getElementById('su_password').value.trim(),
-    phone: document.getElementById('su_phone').value.trim(),
-    hall: document.getElementById('su_hall').value
+    phone: document.getElementById('su_phone').value.trim()
   };
+  const hallField = document.getElementById('su_hall');
+  if (hallField) params.hall = hallField.value;
   const out = document.getElementById('su_output');
   out.className = 'output show'; out.textContent = 'Submitting...';
   const data = await api('signup', params);
@@ -585,12 +600,30 @@ async function submitAdminLogin() {
   renderAdminPanel();
 }
 
-const BOOLEAN_SETTING_KEYS = ['setupEnabled', 'dashboardEnabled', 'gameActive', 'allowMafiaInCitizenVotes', 'allowDetectiveInCitizenVotes'];
-const TEXTAREA_SETTING_KEYS = ['mafiaInstructions', 'detectiveInstructions', 'citizenInstructions', 'announcementMessage'];
+const BOOLEAN_SETTING_KEYS = ['setupEnabled', 'dashboardEnabled', 'gameActive', 'allowMafiaInCitizenVotes', 'allowDetectiveInCitizenVotes', 'hallFieldEnabled'];
+const TEXTAREA_SETTING_KEYS = ['mafiaInstructions', 'detectiveInstructions', 'citizenInstructions', 'gameInstructions', 'announcementMessage'];
 const DEFAULT_INSTRUCTIONS = {
   mafiaInstructions: `MAFIA: Get a player alone, reveal you're mafia, get their codename, tell them they're eliminated and must stay silent, then carry on as normal. Officially eliminate them below. Blend in as a citizen when helpful — your codename also works in the citizen voting section.`,
   detectiveInstructions: `DETECTIVE: Keep your role secret! You get one guess per cooldown period. If your guess is correct, subtly tip off citizens to vote that player out — don't reveal you're the detective.`,
-  citizenInstructions: `CITIZEN: Talk to other players to figure out who the mafia are. Vote against someone you suspect below — you need others to also vote before they're eliminated. Be careful, you might vote out a teammate! Casting a vote uses your cooldown once it actually results in an elimination.`
+  citizenInstructions: `CITIZEN: Talk to other players to figure out who the mafia are. Vote against someone you suspect below — you need others to also vote before they're eliminated. Be careful, you might vote out a teammate! Casting a vote uses your cooldown once it actually results in an elimination.`,
+  gameInstructions: `WELCOME TO CONTINUOUS MAFIA!
+
+Once everyone signs up, each player is assigned a role: mafia, detective, or citizen.
+
+MAFIA get to eliminate one player periodically. Find a player alone, reveal you are mafia, get their codename, tell them they are eliminated and must stay silent about it, then carry on as normal. Officially eliminate them on your dashboard.
+
+The DETECTIVE gets a periodic guess. Go to your dashboard, enter the real name of who you suspect is mafia. If correct, subtly tip off citizens to vote that player out without revealing you are the detective.
+
+CITIZENS discuss amongst themselves to figure out who the mafia are, and vote against suspects on their dashboard. A vote only takes effect once enough citizens vote the same target — so recruit others to vote with you. Be careful: guessing wrong eliminates a teammate.
+
+The game ends when all mafia are eliminated, or when only a couple of non-mafia players remain.
+
+IMPORTANT RULES:
+1. If you are eliminated, you may NOT discuss gameplay with anyone still active — do not even reveal that you were eliminated. Just say "check the website."
+2. Use the Player List page to check exact spelling of names and who is still active before submitting any action.
+3. You will not be told how many mafia remain in total, but you will be told when your own elimination guess was correct.
+
+Have fun, and don't take it too seriously!`
 };
 let lastAdminData = null;
 
