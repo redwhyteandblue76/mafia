@@ -692,9 +692,11 @@ async function renderAdminPanel() {
         </select>
       </td>
       <td><span class="stamp ${pl.status==='active'?'active':'eliminated'}" style="font-size:9px; padding:2px 6px;">${pl.status==='active'?'Active':'Out'}</span></td>
-      <td><button class="secondary" style="width:auto; padding:4px 10px;" onclick="savePlayer('${pl.codename}')">Save</button></td>
-      <td><button class="secondary" style="width:auto; padding:4px 10px; border-color:var(--danger); color:#e88;" onclick="removePlayer('${pl.codename}')">Remove</button></td>
-    </tr>`).join('');
+      <td style="white-space:nowrap;">
+        <button class="secondary" style="width:auto; padding:4px 10px;" onclick="savePlayer('${pl.codename}')">Save</button>
+        <button class="secondary" style="width:auto; padding:4px 10px; margin-top:6px; border-color:var(--danger); color:#e88;" onclick="removePlayer('${pl.codename}')">Remove</button>
+      </td>
+          </tr>`).join('');
 
   const logRows = data.log.map(l => `<div class="player-list-item"><b>${new Date(l.time).toLocaleString()}</b> — ${l.message}</div>`).join('');
 
@@ -715,7 +717,7 @@ async function renderAdminPanel() {
       <table><tbody>${settingsRows}</tbody></table>
     </div>
     <div class="card" style="max-width:700px;">
-      <h2>👥 Players</h2>
+      <h2>👥 Players v2</h2>
       <button class="secondary" id="revealPlayersBtn" onclick="revealPlayers()">🙈 Reveal Player List</button>
       <div id="playersHidden" style="display:none; margin-top:12px;">
         <table><thead><tr><th>Name</th><th>Codename</th><th>Role</th><th>Status</th><th></th><th></th><th></th></tr></thead>
